@@ -3,31 +3,53 @@
 class CompanyService
   class << self
     def fetch_company_info(cui)
+      Rails.logger.info "🔍 Starting company lookup for CUI: #{cui}"
+
       # For demo purposes, return mock data for the test CUI if no API key configured
       if cui == ListaFirme::TEST_CUI && ListaFirme.test_mode?
-        Rails.logger.info "Using mock data for CUI #{cui} (API key not configured)"
+        Rails.logger.info "📋 Using mock data for CUI #{cui} (API key not configured)"
         return mock_company_data
       end
 
       # Validate API key configuration
       unless ListaFirme.configured?
-        Rails.logger.error "Lista Firme API key not configured. See SECURITY_SETUP.md for instructions."
+        Rails.logger.error "❌ Lista Firme API key not configured. See SECURITY_SETUP.md for instructions."
         return nil
       end
+
+      Rails.logger.info "✅ API key configured, proceeding with real API call"
 
       # Fetch real company information from Lista Firme API
       company_data = fetch_basic_info(cui, ListaFirme.api_key)
 
-      return nil if company_data.nil?
+      if company_data.nil?
+        Rails.logger.error "❌ No data returned from API for CUI: #{cui}"
+        return nil
+      end
+
+      Rails.logger.info "✅ Raw API data received for CUI: #{cui}"
+      Rails.logger.debug "📊 Raw API response: #{company_data.inspect}" if Rails.env.development?
 
       # Extract and format the required information
-      format_company_data(company_data)
+      formatted_data = format_company_data(company_data)
+
+      if formatted_data
+        Rails.logger.info "✅ Successfully formatted company data for CUI: #{cui}"
+      else
+        Rails.logger.error "❌ Failed to format company data for CUI: #{cui}"
+      end
+
+      formatted_data
     end
 
     private
 
     def fetch_basic_info(cui, api_key)
       url = "#{ListaFirme::API_BASE_URL}/info-v2.asp"
+
+      Rails.logger.info "🌐 Making API request to: #{url}"
+      Rails.logger.info "🔑 Using API key: #{api_key[0..5]}...#{api_key[-3..-1]}" # Log partial key for debugging
+      Rails.logger.info "📋 Requesting data for CUI: #{cui}"
 
       # Request all the required fields as per API documentation
       data = {
@@ -46,12 +68,16 @@ class CompanyService
         "Profit" => ""
       }
 
+      Rails.logger.debug "📤 Request data structure: #{data.to_json}" if Rails.env.development?
+
       # Use POST method for security (as recommended in API docs)
       # This prevents API key exposure in server logs
       params = {
         key: api_key,
         data: data.to_json
       }
+
+      Rails.logger.info "📡 Sending POST request with #{params.keys.join(', ')} parameters"
 
       begin
         # Configure Faraday with security headers and timeout
@@ -60,39 +86,115 @@ class CompanyService
           conn.options.open_timeout = ListaFirme::API_OPEN_TIMEOUT
           conn.headers["User-Agent"] = "EuFunding/1.0"
           conn.headers["Content-Type"] = "application/x-www-form-urlencoded"
+
+          # Enable detailed logging in development
+          if Rails.env.development?
+            conn.response :logger, Rails.logger, bodies: true
+          end
         end
 
+        Rails.logger.info "⏱️ Making HTTP request with #{ListaFirme::API_TIMEOUT}s timeout"
+
+        start_time = Time.current
         response = connection.post(url, params)
+        duration = Time.current - start_time
+
+        Rails.logger.info "📈 API request completed in #{duration.round(2)}s"
+        Rails.logger.info "📊 Response status: #{response.status}"
+        Rails.logger.info "📏 Response size: #{response.body.length} bytes"
+
+        # Log response headers in development
+        if Rails.env.development?
+          Rails.logger.debug "📋 Response headers: #{response.headers.inspect}"
+        end
 
         if response.success?
-          JSON.parse(response.body)
+          Rails.logger.info "✅ Successful API response (#{response.status})"
+
+          # Log the raw response body for debugging
+          Rails.logger.debug "📄 Raw response body: #{response.body}" if Rails.env.development?
+
+          begin
+            parsed_response = JSON.parse(response.body)
+
+            # Check for API errors in the response
+            if parsed_response["error"]
+              Rails.logger.error "❌ API returned error: #{parsed_response['error']}"
+              Rails.logger.error "📄 Full error response: #{parsed_response.inspect}"
+              return nil
+            end
+
+            # Log successful parsing
+            Rails.logger.info "✅ Successfully parsed JSON response"
+            Rails.logger.info "💰 API cost: #{parsed_response['cost']} afișări"
+            Rails.logger.info "👁️ Remaining views: #{parsed_response['views']}"
+
+            # Log which fields were returned
+            returned_fields = parsed_response.keys.reject { |k| %w[cost views error].include?(k) }
+            Rails.logger.info "📋 Returned fields: #{returned_fields.join(', ')}"
+
+            parsed_response
+          rescue JSON::ParserError => e
+            Rails.logger.error "❌ Failed to parse JSON response: #{e.message}"
+            Rails.logger.error "📄 Raw response that failed to parse: #{response.body}"
+            nil
+          end
         else
-          Rails.logger.error "Lista Firme API request failed with status: #{response.status}"
-          Rails.logger.error "Response body: #{response.body}" if Rails.env.development?
+          Rails.logger.error "❌ API request failed with status: #{response.status}"
+          Rails.logger.error "📄 Error response body: #{response.body}"
+          Rails.logger.error "📋 Response headers: #{response.headers.inspect}"
+
+          # Try to parse error response
+          begin
+            error_data = JSON.parse(response.body)
+            if error_data["error"]
+              Rails.logger.error "🚨 API error message: #{error_data['error']}"
+            end
+          rescue JSON::ParserError
+            Rails.logger.error "📄 Non-JSON error response: #{response.body}"
+          end
+
           nil
         end
-      rescue JSON::ParserError => e
-        Rails.logger.error "Failed to parse Lista Firme API response: #{e.message}"
+      rescue Faraday::TimeoutError => e
+        Rails.logger.error "⏰ API request timeout after #{ListaFirme::API_TIMEOUT}s: #{e.message}"
+        nil
+      rescue Faraday::ConnectionFailed => e
+        Rails.logger.error "🔌 Connection failed to Lista Firme API: #{e.message}"
         nil
       rescue Faraday::Error => e
-        Rails.logger.error "Network error connecting to Lista Firme API: #{e.message}"
+        Rails.logger.error "🌐 Network error connecting to Lista Firme API: #{e.message}"
+        Rails.logger.error "🔍 Error details: #{e.class} - #{e.message}"
         nil
       rescue StandardError => e
-        Rails.logger.error "Unexpected error in Lista Firme API call: #{e.message}"
+        Rails.logger.error "💥 Unexpected error in Lista Firme API call: #{e.message}"
+        Rails.logger.error "🔍 Error class: #{e.class}"
+        Rails.logger.error "📍 Backtrace: #{e.backtrace.first(5).join("\n")}"
         nil
       end
     end
 
     def format_company_data(raw_data)
-      return nil if raw_data.nil? || raw_data["error"]
+      Rails.logger.info "🔄 Starting to format company data"
+
+      return nil if raw_data.nil?
 
       # Handle the case where we get an error response
       if raw_data["error"]
-        Rails.logger.error "API returned error: #{raw_data['error']}"
+        Rails.logger.error "❌ API returned error in data: #{raw_data['error']}"
         return nil
       end
 
-      {
+      # Check if we have the minimum required data
+      unless raw_data["TaxCode"]
+        Rails.logger.error "❌ No TaxCode in API response"
+        Rails.logger.debug "📄 Available keys: #{raw_data.keys.join(', ')}"
+        return nil
+      end
+
+      Rails.logger.info "✅ Formatting data for TaxCode: #{raw_data['TaxCode']}"
+
+      formatted_data = {
         cui: raw_data["TaxCode"],
         company_name: raw_data["Name"],
         status: raw_data["Status"],
@@ -109,6 +211,15 @@ class CompanyService
         cost: raw_data["cost"],
         views_remaining: raw_data["views"]
       }
+
+      # Log which fields have data
+      filled_fields = formatted_data.select { |k, v| v.present? }.keys
+      empty_fields = formatted_data.select { |k, v| v.blank? }.keys
+
+      Rails.logger.info "✅ Filled fields: #{filled_fields.join(', ')}"
+      Rails.logger.info "⚪ Empty fields: #{empty_fields.join(', ')}" if empty_fields.any?
+
+      formatted_data
     end
 
     def format_date(date_string)
