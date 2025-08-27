@@ -10,7 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_27_103750) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_27_122423) do
+  create_table "api_logs", force: :cascade do |t|
+    t.string "cui", null: false
+    t.text "request_url", null: false
+    t.string "http_method", null: false
+    t.text "request_headers"
+    t.text "request_body"
+    t.integer "response_status"
+    t.text "response_headers"
+    t.text "response_body"
+    t.decimal "request_duration", precision: 8, scale: 4
+    t.text "error_message"
+    t.string "user_ip"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_api_logs_on_created_at"
+    t.index ["cui"], name: "index_api_logs_on_cui"
+    t.index ["response_status"], name: "index_api_logs_on_response_status"
+  end
+
   create_table "chats", force: :cascade do |t|
     t.string "model_id"
     t.datetime "created_at", null: false

@@ -1,0 +1,84 @@
+<% content_for :title, "API Logs" %>
+
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">API Request Logs</h1>
+    <%= link_to "Clear Old Logs", clear_old_api_logs_path, method: :delete, 
+                class: "bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded",
+                confirm: "Are you sure you want to delete logs older than 30 days?" %>
+  </div>
+
+  <!-- Statistics -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-blue-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-blue-800">Total Requests</h3>
+      <p class="text-2xl font-bold text-blue-900"><%= @total_requests %></p>
+    </div>
+    <div class="bg-green-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-green-800">Successful</h3>
+      <p class="text-2xl font-bold text-green-900"><%= @success_count %></p>
+    </div>
+    <div class="bg-red-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-red-800">Errors</h3>
+      <p class="text-2xl font-bold text-red-900"><%= @error_count %></p>
+    </div>
+    <div class="bg-yellow-100 p-4 rounded-lg">
+      <h3 class="text-lg font-semibold text-yellow-800">Success Rate</h3>
+      <p class="text-2xl font-bold text-yellow-900">
+        <%= @total_requests > 0 ? "#{(@success_count.to_f / @total_requests * 100).round(1)}%" : "0%" %>
+      </p>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="mb-6">
+    <%= form_with url: search_api_logs_path, method: :get, local: true, class: "flex gap-2" do |form| %>
+      <%= form.text_field :cui, placeholder: "Search by CUI", value: params[:cui], 
+                          class: "flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" %>
+      <%= form.submit "Search", class: "bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" %>
+    <% end %>
+  </div>
+
+  <!-- Recent Logs Table -->
+  <div class="bg-white shadow overflow-hidden sm:rounded-md">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Recent API Requests</h3>
+    </div>
+    <ul class="divide-y divide-gray-200">
+      <% @api_logs.each do |log| %>
+        <li class="px-4 py-4 hover:bg-gray-50">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="flex items-center">
+                <span class="<%= log.success? ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %> px-2 py-1 text-xs font-medium rounded-full mr-3">
+                  <%= log.success? ? '✅' : '❌' %>
+                </span>
+                <div>
+                  <p class="text-sm font-medium text-gray-900">CUI: <%= log.cui %></p>
+                  <p class="text-sm text-gray-500">
+                    <%= log.formatted_created_at %> • 
+                    Status: <%= log.response_status %> • 
+                    Duration: <%= log.duration_ms %>ms
+                  </p>
+                  <% if log.error_message.present? %>
+                    <p class="text-sm text-red-600 mt-1">Error: <%= log.error_message %></p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+            <div class="flex-shrink-0">
+              <%= link_to "View Details", api_log_path(log), 
+                          class: "text-blue-600 hover:text-blue-900 text-sm font-medium" %>
+            </div>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <% if @api_logs.empty? %>
+    <div class="text-center py-8">
+      <p class="text-gray-500">No API logs found.</p>
+    </div>
+  <% end %>
+</div>

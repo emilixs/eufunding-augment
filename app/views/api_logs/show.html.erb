@@ -1,0 +1,92 @@
+<% content_for :title, "API Log Details" %>
+
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold text-gray-900">API Log Details</h1>
+    <%= link_to "← Back to Logs", api_logs_path, class: "text-blue-600 hover:text-blue-900" %>
+  </div>
+
+  <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Request Information</h3>
+      <p class="mt-1 max-w-2xl text-sm text-gray-500">
+        <%= @api_log.formatted_created_at %>
+      </p>
+    </div>
+    <div class="border-t border-gray-200">
+      <dl>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Status</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+            <span class="<%= @api_log.success? ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %> px-2 py-1 text-xs font-medium rounded-full">
+              <%= @api_log.success? ? '✅ Success' : '❌ Error' %>
+            </span>
+            (HTTP <%= @api_log.response_status %>)
+          </dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">CUI</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @api_log.cui %></dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Request URL</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @api_log.request_url %></dd>
+        </div>
+        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">HTTP Method</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @api_log.http_method %></dd>
+        </div>
+        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+          <dt class="text-sm font-medium text-gray-500">Duration</dt>
+          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @api_log.duration_ms %>ms</dd>
+        </div>
+        <% if @api_log.user_ip.present? %>
+          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-gray-500">User IP</dt>
+            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2"><%= @api_log.user_ip %></dd>
+          </div>
+        <% end %>
+        <% if @api_log.error_message.present? %>
+          <div class="bg-red-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+            <dt class="text-sm font-medium text-red-500">Error Message</dt>
+            <dd class="mt-1 text-sm text-red-900 sm:mt-0 sm:col-span-2"><%= @api_log.error_message %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Request Details -->
+  <div class="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Request Details</h3>
+    </div>
+    <div class="border-t border-gray-200">
+      <div class="px-4 py-5">
+        <h4 class="text-sm font-medium text-gray-500 mb-2">Request Headers</h4>
+        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(JSON.parse(@api_log.request_headers)) %></pre>
+      </div>
+      <div class="px-4 py-5 border-t border-gray-200">
+        <h4 class="text-sm font-medium text-gray-500 mb-2">Request Body</h4>
+        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto"><%= @api_log.request_body %></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Response Details -->
+  <div class="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Response Details</h3>
+    </div>
+    <div class="border-t border-gray-200">
+      <div class="px-4 py-5">
+        <h4 class="text-sm font-medium text-gray-500 mb-2">Response Headers</h4>
+        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto"><%= JSON.pretty_generate(JSON.parse(@api_log.response_headers)) %></pre>
+      </div>
+      <div class="px-4 py-5 border-t border-gray-200">
+        <h4 class="text-sm font-medium text-gray-500 mb-2">Response Body</h4>
+        <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto"><%= @api_log.response_body %></pre>
+      </div>
+    </div>
+  </div>
+</div>

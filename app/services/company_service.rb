@@ -51,7 +51,7 @@ class CompanyService
 
     private
 
-    def fetch_basic_info(cui, api_key)
+    def fetch_basic_info(cui, api_key, user_ip = nil)
       url = "#{ListaFirme::API_BASE_URL}/info-v2.asp"
 
       Rails.logger.info "🌐 Making API request to: #{url}"
@@ -110,6 +110,26 @@ class CompanyService
         response = connection.post(url, params)
         duration = Time.current - start_time
 
+        # Prepare data for database logging
+        request_headers = {
+          "User-Agent" => "EuFunding/1.0",
+          "Content-Type" => "application/x-www-form-urlencoded"
+        }
+
+        # Log to database (without exposing full API key)
+        log_data = {
+          cui: cui,
+          request_url: url,
+          http_method: "POST",
+          request_headers: request_headers,
+          request_body: "key=#{api_key[0..5]}...&data=#{data.to_json}",
+          response_status: response.status,
+          response_headers: response.headers.to_h,
+          response_body: response.body,
+          request_duration: duration,
+          user_ip: user_ip
+        }
+
         Rails.logger.info "📈 API request completed in #{duration.round(2)}s"
         Rails.logger.info "📊 Response status: #{response.status}"
         Rails.logger.info "📏 Response size: #{response.body.length} bytes"
@@ -131,6 +151,9 @@ class CompanyService
             if parsed_response["error"]
               Rails.logger.error "❌ API returned error: #{parsed_response['error']}"
               Rails.logger.error "📄 Full error response: #{parsed_response.inspect}"
+
+              # Log error to database
+              ApiLog.log_api_request(**log_data.merge(error_message: parsed_response["error"]))
               return nil
             end
 
@@ -143,10 +166,16 @@ class CompanyService
             returned_fields = parsed_response.keys.reject { |k| %w[cost views error].include?(k) }
             Rails.logger.info "📋 Returned fields: #{returned_fields.join(', ')}"
 
+            # Log successful request to database
+            ApiLog.log_api_request(**log_data)
+
             parsed_response
           rescue JSON::ParserError => e
             Rails.logger.error "❌ Failed to parse JSON response: #{e.message}"
             Rails.logger.error "📄 Raw response that failed to parse: #{response.body}"
+
+            # Log JSON parsing error to database
+            ApiLog.log_api_request(**log_data.merge(error_message: "JSON Parse Error: #{e.message}"))
             nil
           end
         else
@@ -156,33 +185,102 @@ class CompanyService
           Rails.logger.error "   Headers: #{response.headers.to_h}"
           Rails.logger.error "   Raw Body: #{response.body}"
 
+          error_message = "HTTP #{response.status}: #{response.reason_phrase}"
+
           # Try to parse error response
           begin
             error_data = JSON.parse(response.body)
             if error_data["error"]
               Rails.logger.error "🚨 API error message: #{error_data['error']}"
+              error_message = error_data["error"]
             end
             Rails.logger.error "🔍 Parsed error data: #{error_data.inspect}"
           rescue JSON::ParserError
             Rails.logger.error "📄 Non-JSON error response (raw): #{response.body}"
+            error_message += " - Non-JSON response: #{response.body[0..200]}"
           end
+
+          # Log error to database
+          ApiLog.log_api_request(**log_data.merge(error_message: error_message))
 
           nil
         end
       rescue Faraday::TimeoutError => e
-        Rails.logger.error "⏰ API request timeout after #{ListaFirme::API_TIMEOUT}s: #{e.message}"
+        error_msg = "API request timeout after #{ListaFirme::API_TIMEOUT}s: #{e.message}"
+        Rails.logger.error "⏰ #{error_msg}"
+
+        # Log timeout to database
+        ApiLog.log_api_request(
+          cui: cui,
+          request_url: url,
+          http_method: "POST",
+          request_headers: { "User-Agent" => "EuFunding/1.0" },
+          request_body: "key=#{api_key[0..5]}...&data=#{data.to_json}",
+          response_status: 0,
+          response_headers: {},
+          response_body: "",
+          request_duration: ListaFirme::API_TIMEOUT,
+          error_message: error_msg,
+          user_ip: user_ip
+        )
         nil
       rescue Faraday::ConnectionFailed => e
-        Rails.logger.error "🔌 Connection failed to Lista Firme API: #{e.message}"
+        error_msg = "Connection failed to Lista Firme API: #{e.message}"
+        Rails.logger.error "🔌 #{error_msg}"
+
+        # Log connection error to database
+        ApiLog.log_api_request(
+          cui: cui,
+          request_url: url,
+          http_method: "POST",
+          request_headers: { "User-Agent" => "EuFunding/1.0" },
+          request_body: "key=#{api_key[0..5]}...&data=#{data.to_json}",
+          response_status: 0,
+          response_headers: {},
+          response_body: "",
+          request_duration: 0,
+          error_message: error_msg,
+          user_ip: user_ip
+        )
         nil
       rescue Faraday::Error => e
-        Rails.logger.error "🌐 Network error connecting to Lista Firme API: #{e.message}"
-        Rails.logger.error "🔍 Error details: #{e.class} - #{e.message}"
+        error_msg = "Network error connecting to Lista Firme API: #{e.class} - #{e.message}"
+        Rails.logger.error "🌐 #{error_msg}"
+
+        # Log network error to database
+        ApiLog.log_api_request(
+          cui: cui,
+          request_url: url,
+          http_method: "POST",
+          request_headers: { "User-Agent" => "EuFunding/1.0" },
+          request_body: "key=#{api_key[0..5]}...&data=#{data.to_json}",
+          response_status: 0,
+          response_headers: {},
+          response_body: "",
+          request_duration: 0,
+          error_message: error_msg,
+          user_ip: user_ip
+        )
         nil
       rescue StandardError => e
-        Rails.logger.error "💥 Unexpected error in Lista Firme API call: #{e.message}"
-        Rails.logger.error "🔍 Error class: #{e.class}"
+        error_msg = "Unexpected error in Lista Firme API call: #{e.class} - #{e.message}"
+        Rails.logger.error "💥 #{error_msg}"
         Rails.logger.error "📍 Backtrace: #{e.backtrace.first(5).join("\n")}"
+
+        # Log unexpected error to database
+        ApiLog.log_api_request(
+          cui: cui,
+          request_url: url,
+          http_method: "POST",
+          request_headers: { "User-Agent" => "EuFunding/1.0" },
+          request_body: "key=#{api_key[0..5]}...&data=#{data.to_json}",
+          response_status: 0,
+          response_headers: {},
+          response_body: "",
+          request_duration: 0,
+          error_message: error_msg,
+          user_ip: user_ip
+        )
         nil
       end
     end
