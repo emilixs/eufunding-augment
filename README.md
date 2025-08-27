@@ -1,24 +1,127 @@
-# README
+# EuFunding - Company Lookup Application
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+A modern Rails 8 application for looking up Romanian company information using the Lista Firme API.
 
-Things you may want to cover:
+## Features
 
-* Ruby version
+- **Simple Interface**: Single input field for company CUI lookup
+- **Comprehensive Data**: Extracts all essential company information
+- **Modern UI**: Built with TailwindCSS v4 and DaisyUI components
+- **Responsive Design**: Works on desktop and mobile devices
+- **Error Handling**: Graceful handling of invalid inputs and API errors
 
-* System dependencies
+## Company Information Displayed
 
-* Configuration
+- CUI (Company Unique Identifier)
+- Company Name
+- Status (Active/Inactive)
+- Fiscal Activity
+- Legal Form
+- Registration Date
+- Number of Employees
+- NACE Code (Economic Activity)
+- Address, City, County
+- Turnover and Profit
 
-* Database creation
+## Technology Stack
 
-* Database initialization
+- **Ruby 3.4.2** with PRISM parser
+- **Rails 8.0.2.1** with modern defaults
+- **TailwindCSS v4** for styling
+- **DaisyUI** for UI components
+- **RubyLLM** for AI integration
+- **Faraday** for HTTP requests
+- **SQLite** for development database
+- **Minitest** for testing
 
-* How to run the test suite
+## Quick Start
 
-* Services (job queues, cache servers, search engines, etc.)
+### Prerequisites
 
-* Deployment instructions
+- Ruby 3.4.2
+- Node.js (for asset compilation)
+- Git
 
-* ...
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/emilixs/eufunding-augment.git
+cd eufunding-augment
+```
+
+2. Install dependencies:
+```bash
+bundle install
+npm install
+```
+
+3. Setup the database:
+```bash
+bin/rails db:create
+bin/rails db:migrate
+```
+
+4. Start the development server:
+```bash
+bin/dev
+```
+
+5. Visit `http://localhost:3000` in your browser
+
+### Testing
+
+Run the test suite:
+```bash
+bin/rails test
+```
+
+Check code quality:
+```bash
+bundle exec rubocop
+bundle exec brakeman
+```
+
+## Usage
+
+1. Enter a Romanian company CUI in the search field
+2. Click "Caută Compania" (Search Company)
+3. View the comprehensive company information
+
+**Test CUI**: Use `14837428` to see demo data
+
+## API Integration
+
+The application integrates with the [Lista Firme API](https://membri.listafirme.ro/specificatii/api-info-v2.asp) to fetch real-time company data.
+
+For production use, add your Lista Firme API key to Rails credentials:
+```bash
+bin/rails credentials:edit
+```
+
+## Development
+
+### Code Quality
+
+- **RuboCop Rails Omakase**: Enforced code style
+- **Brakeman**: Security vulnerability scanning
+- **Comprehensive Tests**: Full test coverage
+
+### Project Structure
+
+- `app/controllers/company_controller.rb` - Handles company lookup requests
+- `app/services/company_service.rb` - Lista Firme API integration
+- `app/views/home/index.html.erb` - Homepage with search form
+- `app/views/company/show.html.erb` - Company information display
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and code quality checks
+5. Submit a pull request
+
+## License
+
+This project is available as open source under the terms of the MIT License.
