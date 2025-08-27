@@ -399,6 +399,7 @@ DEPENDENCIES
   brakeman
   capybara
   debug
+  faraday
   importmap-rails
   jbuilder
   kamal

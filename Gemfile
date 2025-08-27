@@ -20,6 +20,8 @@ gem "jbuilder"
 gem "tailwindcss-rails"
 # LLM integration [https://rubyllm.com]
 gem "ruby_llm"
+# HTTP client for API requests
+gem "faraday"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"

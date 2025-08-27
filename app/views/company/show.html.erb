@@ -1,0 +1,177 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <%= link_to root_path, class: "btn btn-outline btn-sm mb-4" do %>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Înapoi la căutare
+      <% end %>
+
+      <h1 class="text-3xl font-bold text-gray-800">Informații Companie</h1>
+      <p class="text-gray-600">CUI: <%= @cui %></p>
+    </div>
+
+    <% if flash[:error] %>
+      <div class="alert alert-error mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span><%= flash[:error] %></span>
+      </div>
+    <% end %>
+
+    <% if @company_data %>
+      <!-- Company Information Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Basic Information -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h3M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Informații de Bază
+            </h2>
+
+            <div class="space-y-3">
+              <div class="flex justify-between">
+                <span class="font-semibold">CUI:</span>
+                <span><%= @company_data[:cui] %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Nume Companie:</span>
+                <span class="text-right"><%= @company_data[:company_name] %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Status:</span>
+                <span class="badge <%= @company_data[:status] == 'functiune' ? 'badge-success' : 'badge-error' %>">
+                  <%= @company_data[:status]&.capitalize %>
+                </span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Activitate Fiscală:</span>
+                <span><%= @company_data[:fiscal_activity] || 'N/A' %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Formă Juridică:</span>
+                <span><%= @company_data[:legal_form] %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Data Înregistrării:</span>
+                <span><%= @company_data[:registration_date] %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Business Information -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title text-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Informații de Afaceri
+            </h2>
+
+            <div class="space-y-3">
+              <div class="flex justify-between">
+                <span class="font-semibold">Angajați:</span>
+                <span><%= @company_data[:employees] || 'N/A' %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Cod NACE:</span>
+                <span class="text-right"><%= @company_data[:nace_code] || 'N/A' %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Cifra de Afaceri:</span>
+                <span class="text-success font-semibold"><%= @company_data[:turnover] || 'N/A' %></span>
+              </div>
+
+              <div class="flex justify-between">
+                <span class="font-semibold">Profit:</span>
+                <span class="text-info font-semibold"><%= @company_data[:profit] || 'N/A' %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Location Information -->
+        <div class="card bg-base-100 shadow-xl md:col-span-2">
+          <div class="card-body">
+            <h2 class="card-title text-accent">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Localizare
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <span class="font-semibold block">Adresă:</span>
+                <span><%= @company_data[:address] || 'N/A' %></span>
+              </div>
+
+              <div>
+                <span class="font-semibold block">Oraș:</span>
+                <span><%= @company_data[:city] || 'N/A' %></span>
+              </div>
+
+              <div>
+                <span class="font-semibold block">Județ:</span>
+                <span><%= @company_data[:county] || 'N/A' %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Usage Information -->
+      <% if @company_data[:cost] || @company_data[:views_remaining] %>
+        <div class="mt-8 text-center">
+          <div class="stats shadow">
+            <% if @company_data[:cost] %>
+              <div class="stat">
+                <div class="stat-title">Cost Interogare</div>
+                <div class="stat-value text-primary"><%= @company_data[:cost] %></div>
+                <div class="stat-desc">afișări consumate</div>
+              </div>
+            <% end %>
+
+            <% if @company_data[:views_remaining] %>
+              <div class="stat">
+                <div class="stat-title">Afișări Rămase</div>
+                <div class="stat-value text-secondary"><%= @company_data[:views_remaining] %></div>
+                <div class="stat-desc">în pachetul curent</div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+    <% else %>
+      <!-- No Data Found -->
+      <div class="text-center py-12">
+        <div class="max-w-md mx-auto">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.5-.816-6.207-2.175.168-.288.36-.566.575-.832C7.662 10.736 9.73 10 12 10s4.338.736 5.632 1.993c.215.266.407.544.575.832A7.962 7.962 0 0112 15z" />
+          </svg>
+          <h3 class="text-xl font-semibold text-gray-700 mb-2">Nu s-au găsit informații</h3>
+          <p class="text-gray-500 mb-6">Nu am putut găsi informații pentru CUI-ul specificat.</p>
+          <%= link_to "Încearcă din nou", root_path, class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
