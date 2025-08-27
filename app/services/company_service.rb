@@ -2,6 +2,13 @@
 
 class CompanyService
   class << self
+    # Debug method to test API connectivity
+    def debug_api_call(cui)
+      Rails.logger.level = :debug
+      Rails.logger.info "🚀 DEBUG MODE: Testing API call for CUI: #{cui}"
+      fetch_company_info(cui)
+    end
+
     def fetch_company_info(cui)
       Rails.logger.info "🔍 Starting company lookup for CUI: #{cui}"
 
@@ -79,6 +86,15 @@ class CompanyService
 
       Rails.logger.info "📡 Sending POST request with #{params.keys.join(', ')} parameters"
 
+      # Log the EXACT request being sent
+      Rails.logger.info "🔍 EXACT REQUEST DETAILS:"
+      Rails.logger.info "   URL: #{url}"
+      Rails.logger.info "   Method: POST"
+      Rails.logger.info "   Content-Type: application/x-www-form-urlencoded"
+      Rails.logger.info "   API Key: #{api_key[0..5]}...#{api_key[-3..-1]}"
+      Rails.logger.info "   Data JSON: #{data.to_json}"
+      Rails.logger.info "   Full params: key=#{api_key[0..5]}...&data=#{data.to_json}"
+
       begin
         # Configure Faraday with security headers and timeout
         connection = Faraday.new do |conn|
@@ -86,11 +102,6 @@ class CompanyService
           conn.options.open_timeout = ListaFirme::API_OPEN_TIMEOUT
           conn.headers["User-Agent"] = "EuFunding/1.0"
           conn.headers["Content-Type"] = "application/x-www-form-urlencoded"
-
-          # Enable detailed logging in development
-          if Rails.env.development?
-            conn.response :logger, Rails.logger, bodies: true
-          end
         end
 
         Rails.logger.info "⏱️ Making HTTP request with #{ListaFirme::API_TIMEOUT}s timeout"
@@ -103,16 +114,15 @@ class CompanyService
         Rails.logger.info "📊 Response status: #{response.status}"
         Rails.logger.info "📏 Response size: #{response.body.length} bytes"
 
-        # Log response headers in development
-        if Rails.env.development?
-          Rails.logger.debug "📋 Response headers: #{response.headers.inspect}"
-        end
+        # Log the EXACT response received
+        Rails.logger.info "🔍 EXACT RESPONSE DETAILS:"
+        Rails.logger.info "   Status: #{response.status} #{response.reason_phrase}"
+        Rails.logger.info "   Headers: #{response.headers.to_h}"
+        Rails.logger.info "   Raw Body: #{response.body}"
+        Rails.logger.info "   Body Length: #{response.body.length} bytes"
 
         if response.success?
           Rails.logger.info "✅ Successful API response (#{response.status})"
-
-          # Log the raw response body for debugging
-          Rails.logger.debug "📄 Raw response body: #{response.body}" if Rails.env.development?
 
           begin
             parsed_response = JSON.parse(response.body)
@@ -141,8 +151,10 @@ class CompanyService
           end
         else
           Rails.logger.error "❌ API request failed with status: #{response.status}"
-          Rails.logger.error "📄 Error response body: #{response.body}"
-          Rails.logger.error "📋 Response headers: #{response.headers.inspect}"
+          Rails.logger.error "🔍 EXACT ERROR RESPONSE:"
+          Rails.logger.error "   Status: #{response.status} #{response.reason_phrase}"
+          Rails.logger.error "   Headers: #{response.headers.to_h}"
+          Rails.logger.error "   Raw Body: #{response.body}"
 
           # Try to parse error response
           begin
@@ -150,8 +162,9 @@ class CompanyService
             if error_data["error"]
               Rails.logger.error "🚨 API error message: #{error_data['error']}"
             end
+            Rails.logger.error "🔍 Parsed error data: #{error_data.inspect}"
           rescue JSON::ParserError
-            Rails.logger.error "📄 Non-JSON error response: #{response.body}"
+            Rails.logger.error "📄 Non-JSON error response (raw): #{response.body}"
           end
 
           nil
