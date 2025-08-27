@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* DaisyUI components and utilities */
+@layer components {
+  /* Custom component styles can be added here */
+}
