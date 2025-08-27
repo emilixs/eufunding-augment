@@ -1,21 +1,22 @@
 # frozen_string_literal: true
 
 class CompanyService
-  API_BASE_URL = "https://www.listafirme.ro/api"
-
   class << self
     def fetch_company_info(cui)
-      # For demo purposes, return mock data for the test CUI
-      # In production, you would need a valid API key and make real API calls
-      if cui == "14837428"
+      # For demo purposes, return mock data for the test CUI if no API key configured
+      if cui == ListaFirme::TEST_CUI && ListaFirme.test_mode?
+        Rails.logger.info "Using mock data for CUI #{cui} (API key not configured)"
         return mock_company_data
       end
 
-      # For other CUIs, try the real API (will likely fail without valid key)
-      api_key = Rails.application.credentials.lista_firme_api_key || "demo_key"
+      # Validate API key configuration
+      unless ListaFirme.configured?
+        Rails.logger.error "Lista Firme API key not configured. See SECURITY_SETUP.md for instructions."
+        return nil
+      end
 
-      # First, let's try to get basic company information
-      company_data = fetch_basic_info(cui, api_key)
+      # Fetch real company information from Lista Firme API
+      company_data = fetch_basic_info(cui, ListaFirme.api_key)
 
       return nil if company_data.nil?
 
@@ -26,9 +27,9 @@ class CompanyService
     private
 
     def fetch_basic_info(cui, api_key)
-      url = "#{API_BASE_URL}/info-v2.asp"
+      url = "#{ListaFirme::API_BASE_URL}/info-v2.asp"
 
-      # Request all the required fields
+      # Request all the required fields as per API documentation
       data = {
         "TaxCode" => cui,
         "Name" => "",
@@ -45,25 +46,39 @@ class CompanyService
         "Profit" => ""
       }
 
+      # Use POST method for security (as recommended in API docs)
+      # This prevents API key exposure in server logs
       params = {
         key: api_key,
         data: data.to_json
       }
 
       begin
-        response = Faraday.post(url, params)
+        # Configure Faraday with security headers and timeout
+        connection = Faraday.new do |conn|
+          conn.options.timeout = ListaFirme::API_TIMEOUT
+          conn.options.open_timeout = ListaFirme::API_OPEN_TIMEOUT
+          conn.headers["User-Agent"] = "EuFunding/1.0"
+          conn.headers["Content-Type"] = "application/x-www-form-urlencoded"
+        end
+
+        response = connection.post(url, params)
 
         if response.success?
           JSON.parse(response.body)
         else
-          Rails.logger.error "API request failed with status: #{response.status}"
+          Rails.logger.error "Lista Firme API request failed with status: #{response.status}"
+          Rails.logger.error "Response body: #{response.body}" if Rails.env.development?
           nil
         end
       rescue JSON::ParserError => e
-        Rails.logger.error "Failed to parse API response: #{e.message}"
+        Rails.logger.error "Failed to parse Lista Firme API response: #{e.message}"
         nil
       rescue Faraday::Error => e
-        Rails.logger.error "Network error: #{e.message}"
+        Rails.logger.error "Network error connecting to Lista Firme API: #{e.message}"
+        nil
+      rescue StandardError => e
+        Rails.logger.error "Unexpected error in Lista Firme API call: #{e.message}"
         nil
       end
     end

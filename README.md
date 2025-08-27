@@ -94,10 +94,35 @@ bundle exec brakeman
 
 The application integrates with the [Lista Firme API](https://membri.listafirme.ro/specificatii/api-info-v2.asp) to fetch real-time company data.
 
-For production use, add your Lista Firme API key to Rails credentials:
+### 🔐 Secure API Key Setup
+
+**Method 1: Rails Encrypted Credentials (Recommended)**
 ```bash
-bin/rails credentials:edit
+EDITOR="code --wait" bin/rails credentials:edit
 ```
+
+Add to your credentials file:
+```yaml
+lista_firme:
+  api_key: "your_actual_api_key_here"
+```
+
+**Method 2: Environment Variables**
+```bash
+# Copy and edit .env file
+cp .env.example .env
+# Add your API key to LISTA_FIRME_API_KEY
+```
+
+**📋 See [SECURITY_SETUP.md](SECURITY_SETUP.md) for comprehensive security guidelines**
+
+### Security Features
+- ✅ Server-side only API calls (never exposed to client)
+- ✅ POST method used (prevents key exposure in logs)
+- ✅ Encrypted credentials storage
+- ✅ Proper error handling without key exposure
+- ✅ IP restriction support
+- ✅ Request timeout and retry logic
 
 ## Development
 
